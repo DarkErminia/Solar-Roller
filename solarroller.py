@@ -1,4 +1,4 @@
-from random import randint, random
+from random import randint, random, choice
 import math
 alphabet="ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 lower_alpha="abcdefghijklmnopqrstuvwxyz"
@@ -135,11 +135,14 @@ def roll_moons():
                 }
                 
             
-def create_classical_star_system():
+def create_star_system():
     global planet_distances
     global planet_sizes
     global planet_num_dict
     global planet_display_dict
+    global randomness
+    global cull
+    global upper_limit
     print()
     jovian_planet_distance = frostline*(1+0.2*random())
     jovian_planet_mass = 66+roll()*0.34
@@ -149,12 +152,18 @@ def create_classical_star_system():
     temp_counter = jovian_planet_distance * (1.4+0.6*random())
     while temp_counter <= outer_planet_limit:
         planet_distances = planet_distances+[temp_counter]
-        planet_sizes = planet_sizes+[return_mass(44+roll()*(jovian_planet_mass-44)/100, "outer")]
+        if bool_roll(randomness):
+            planet_sizes = planet_sizes+[return_mass(roll(), "outer")]
+        else:
+            planet_sizes = planet_sizes+[return_mass(44+roll()*(jovian_planet_mass-44)/100, "outer")]
         temp_counter = temp_counter * (1.4+0.6*random())
     temp_counter = jovian_planet_distance / (1.4+0.6*random())
     while temp_counter >= inner_planet_limit:
         planet_distances = [temp_counter]+planet_distances
-        planet_sizes = [return_mass(roll()*0.55, "inner")]+planet_sizes
+        if bool_roll(randomness):
+            planet_sizes = planet_sizes+[return_mass(roll(), "outer")]
+        else:
+            planet_sizes = [return_mass(roll()*0.55, "inner")]+planet_sizes
         temp_counter = temp_counter / (1.4+0.6*random())
         jov_pos += 1
     '''
@@ -179,6 +188,13 @@ def create_classical_star_system():
         except:
             break
     '''
+    if cull == True:
+        while len(planet_distances) > upper_limit:
+            temprand = randint(0,len(planet_distances)-1)
+            planet_distances.pop(temprand)
+            planet_sizes.pop(temprand)
+    print(planet_distances)
+    print(planet_sizes)
     for x in range(len(planet_distances)):
         # Template for a planet. I should probably just use an object for this. To hell with it however.
         local_distance = round(planet_distances[x],2)
@@ -208,7 +224,8 @@ def create_classical_star_system():
                 planet_display_dict[alphabet[x]]["Flags"] += ["Tidally Locked"]
         if local_distance >= habitable_zone[0] and local_distance <= habitable_zone[1]:
             planet_display_dict[alphabet[x]]["Flags"] += ["In Habitable Zone"]
-    planet_display_dict[alphabet[jov_pos]]["Flags"] += ["Jovian Anchor Planet"]
+    if cull == False:
+        planet_display_dict[alphabet[jov_pos]]["Flags"] += ["Jovian Anchor Planet"]
 
 def cal_lumins(mass):
     if mass <= 0.43:
@@ -290,10 +307,13 @@ while True:
     planet_distances = []
     planet_sizes = []
     planet_sizes_num = []
-    planet_num_dict = {}
-    planet_display_dict = {}
+    planet_display_dict = {} # This is what is displayed.
+    planet_num_dict = {} # This is the actual keeper of info.
     star_dict = {}
     moon_num_dict = {}
+    moon_display_dict = {}
+
+    united_display_dict = {}
     
     # All of this taken from Artifexian
     # When in doubt, all units are relative to the Sun,
@@ -302,6 +322,21 @@ while True:
     star_name = input(">")
     print("Input Star Mass. (1.0 = The Sun)")
     mass = float(input(">"))
+    print("How much randomness would you like? 0 - Classical, 100 - Fully random.")
+    print('Input "random" or "r" for this to be random. Integers only please.')
+    randomness = input(">")
+    if randomness == "random" or randomness == "r":
+        randomness = int(roll())
+        print(">Random number selected: "+str(randomness))
+    else:
+        randomness = int(randomness)
+    print("Put up an upper limit you would like on the number of worlds. Plus or minus 1. Plus enter to use the default.")
+    upper_limit = input(">")
+    if upper_limit == "":
+        cull = False
+    else:
+        cull = True
+        upper_limit = int(upper_limit)-1+randint(0,2)
     # All of the below are relative to our own Sun, with
     # the Sun at 1.0.
     lumins = cal_lumins(mass)
@@ -324,9 +359,10 @@ while True:
     inner_planet_limit = 0.1*mass
     outer_planet_limit = 40*mass
     
-    create_classical_star_system()
+    create_star_system()
     
     display_dict(star_dict)
+
     roll_flags(planet_num_dict,planet_display_dict)
     roll_moons()
     roll_flags(moon_num_dict,moon_display_dict)
