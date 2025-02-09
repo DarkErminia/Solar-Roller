@@ -11,7 +11,7 @@ def bool_roll(percent):
         return False
 
 def roll():
-    return randint(1,100)
+    return random()*100
 
 # Constants
 G = 6.674*(10**(-11))
@@ -25,6 +25,7 @@ habitable_zone = ["unset","unset"]
 planet_distances = []
 planet_sizes = []
 planet_sizes_num = []
+planet_types = []
 planet_display_dict = {} # This is what is displayed.
 planet_num_dict = {} # This is the actual keeper of info.
 star_dict = {}
@@ -61,7 +62,9 @@ united_display_dict = {}
 
 def roll_flags(num_dict, display_dict):
     for x in display_dict:
-        if num_dict[x]["mass"] <= 54 and num_dict[x]["mass"] >= 5:
+        if num_dict[x]["distance"] >= habitable_zone[0] and num_dict[x]["distance"] <= habitable_zone[1]:
+            display_dict[x]["Flags"] += ["In Habitable Zone"]
+        if num_dict[x]["mass"] <= 44 and num_dict[x]["mass"] >= 11:
             if bool_roll(33): # Has geological activity?
                 display_dict[x]["Flags"]+=["Geologically Active"]
                 if bool_roll(50): #Has magnetic field?
@@ -99,7 +102,7 @@ def roll_flags(num_dict, display_dict):
             if ("Liquid Water" in display_dict[x]["Flags"] and
             "Geologically Active" in display_dict[x]["Flags"] and
             "Atmosphere" in display_dict[x]["Flags"]):
-                display_dict[x]["Flags"]+=["Habitable"]
+                display_dict[x]["Flags"]+=["Habitable by Humans"]
                 life_roll = roll()
                 if life_roll == 100:
                     display_dict[x]["Flags"]+=["Advanced Civilization (!!)"]
@@ -111,6 +114,22 @@ def roll_flags(num_dict, display_dict):
                     display_dict[x]["Flags"]+=["Plant Life"]
                 elif life_roll >= 20:
                     display_dict[x]["Flags"]+=["Microbial Life"]
+            if (("Liquid Water" in display_dict[x]["Flags"] or
+                 "Water Steam" in display_dict[x]["Flags"] or
+                 "Frozen Water" in display_dict[x]["Flags"]) and
+                "Geologically Active" in display_dict[x]["Flags"]):
+                life_roll = roll()
+                if life_roll == 100:
+                    display_dict[x]["Flags"]+=["Advanced Civilization (!!)"]
+                elif life_roll >= 97:
+                    display_dict[x]["Flags"]+=["Intelligent Life (!)"]
+                elif life_roll >= 87:
+                    display_dict[x]["Flags"]+=["Animal Life"]
+                elif life_roll >= 70:
+                    display_dict[x]["Flags"]+=["Plant Life"]
+                elif life_roll >= 60:
+                    display_dict[x]["Flags"]+=["Microbial Life"]
+                 
                 
 def roll_moons():
     for x in range(len(planet_num_dict)):
@@ -120,6 +139,7 @@ def roll_moons():
             for y in range(num_moons):
                 local_moon_size=min(round(roll()/100*0.5*planet_num_dict[alphabet[x]]["mass"],2),
                                     round(roll()/100*0.5*planet_num_dict[alphabet[x]]["mass"],2),)
+                local_size_info=return_mass(local_moon_size,"moon")
                 moon_num_dict[alphabet[x]+lower_alpha[y]]={
                     "mass": local_moon_size,
                     "temperature": planet_num_dict[alphabet[x]]["temperature"],
@@ -128,16 +148,17 @@ def roll_moons():
                 moon_display_dict[alphabet[x]+lower_alpha[y]]={
                     "Name": alphabet[x]+lower_alpha[y]+" (Moon)",
                     "Orbiting": planet_display_dict[alphabet[x]],
-                    "Mass": return_mass(local_moon_size,"moon"),
                     "Temperature": str(planet_num_dict[alphabet[x]]["temperature"])+" C",
+                    "Type": local_size_info[1],
+                    "Mass": local_size_info[0],
                     "Flags": [],
-                    
                 }
                 
             
 def create_star_system():
     global planet_distances
     global planet_sizes
+    global planet_types
     global planet_num_dict
     global planet_display_dict
     global randomness
@@ -148,7 +169,7 @@ def create_star_system():
     jovian_planet_mass = 66+roll()*0.34
     jov_pos = 0
     planet_distances = [jovian_planet_distance]
-    planet_sizes = [return_mass(jovian_planet_mass, "inner")]
+    planet_sizes = [return_mass(jovian_planet_mass, "outer")]
     temp_counter = jovian_planet_distance * (1.4+0.6*random())
     while temp_counter <= outer_planet_limit:
         planet_distances = planet_distances+[temp_counter]
@@ -161,7 +182,7 @@ def create_star_system():
     while temp_counter >= inner_planet_limit:
         planet_distances = [temp_counter]+planet_distances
         if bool_roll(randomness):
-            planet_sizes = planet_sizes+[return_mass(roll(), "outer")]
+            planet_sizes = [return_mass(roll(), "inner")]+planet_sizes
         else:
             planet_sizes = [return_mass(roll()*0.55, "inner")]+planet_sizes
         temp_counter = temp_counter / (1.4+0.6*random())
@@ -193,8 +214,8 @@ def create_star_system():
             temprand = randint(0,len(planet_distances)-1)
             planet_distances.pop(temprand)
             planet_sizes.pop(temprand)
-    print(planet_distances)
-    print(planet_sizes)
+            planet_sizes_num.pop(temprand)
+            planet_types.pop(temprand)
     for x in range(len(planet_distances)):
         # Template for a planet. I should probably just use an object for this. To hell with it however.
         local_distance = round(planet_distances[x],2)
@@ -210,6 +231,7 @@ def create_star_system():
             "Distance": str(local_distance)+" AU",
             "Orbital Period": str(round(local_orbital_period*365,2))+" days",
             "Temperature": str(round(local_temperature-273,2))+" C", # The 273 is needed to convert from Kelvin to Celsius.
+            "Type": planet_types[x],
             "Mass": local_size,
             "Flags": [],
         }
@@ -222,8 +244,6 @@ def create_star_system():
         if local_orbital_period*365<37:
             if bool_roll(100-round((local_orbital_period*365/3.6)**2-1,0)):
                 planet_display_dict[alphabet[x]]["Flags"] += ["Tidally Locked"]
-        if local_distance >= habitable_zone[0] and local_distance <= habitable_zone[1]:
-            planet_display_dict[alphabet[x]]["Flags"] += ["In Habitable Zone"]
     if cull == False:
         planet_display_dict[alphabet[jov_pos]]["Flags"] += ["Jovian Anchor Planet"]
 
@@ -259,31 +279,57 @@ def star_type(mass):
 
 def return_mass(mass, inner_outer):
     global planet_sizes_num
-    mass=round(mass,2)
+    global planet_types
+    earth_masses = 10**((mass-37)/18)+0.1/3
+    jupiter_masses = earth_masses/317.83
+    saturn_masses = earth_masses/95.162
+    neptune_masses = earth_masses/17.147
+    mars_masses = earth_masses/0.107
+    mercury_masses = earth_masses/0.0553
+    moon_masses = earth_masses/0.0123
+    masses_dict = {
+        "Moon Masses": moon_masses,
+        "Mercury Masses": mercury_masses,
+        "Mars Masses": mars_masses,
+        "Earth Masses": earth_masses,
+        "Neptune Masses": neptune_masses,
+        "Saturn Masses": saturn_masses,
+        "Jupiter Masses": jupiter_masses,
+    }
+    best_display_mass = moon_masses
+    unit = "Moon Masses"
+    for x in masses_dict:
+        if abs(math.log10(masses_dict[x])) < abs(math.log10(best_display_mass)):
+            best_display_mass=masses_dict[x]
+            unit = x
+    display_mass = str(round(best_display_mass,2))+" "+unit
+    if mass>=88:
+        category="Super Jupiter, "
+    elif mass>=77:
+        category="Jupiter-like, "
+    elif mass>=66:
+        category="Sub-Jupiter, "
+    elif mass>=55:
+        category="Ice Giant, "
+    elif mass>=44:
+        category="Super Earth, "
+    elif mass>=33:
+        category="Earth-like, "
+    elif mass>=22:
+        category="Sub-Earth, "
+    elif mass>=12:
+        category="Mars-like, "
+    else:
+        category="Mercury-like, "
     if inner_outer == "inner":
         planet_sizes_num = [mass]+planet_sizes_num
-    if inner_outer == "outer":
+        planet_types = [category]+planet_types
+    elif inner_outer == "outer":
         planet_sizes_num = planet_sizes_num+[mass]
-    if mass>=88:
-        return "Super Jupiter ("+str(mass)+")"
-    elif mass>=77:
-        return "Jupiter-like ("+str(mass)+")"
-    elif mass>=66:
-        return "Sub-Jupiter ("+str(mass)+")"
-    elif mass>=55:
-        return "Ice Giant ("+str(mass)+")"
-    elif mass>=44:
-        return "Super Earth ("+str(mass)+")"
-    elif mass>=33:
-        return "Earth-like ("+str(mass)+")"
-    elif mass>=22:
-        return "Sub-Earth ("+str(mass)+")"
-    elif mass>=11:
-        return "Mars-like ("+str(mass)+")"
-    elif mass>=1:
-        return "Mercury-like ("+str(mass)+")"
-    else:
-        return "Asteroid ("+str(mass)+")"
+        planet_types = planet_types+[category]
+    elif inner_outer == "moon":
+        return [display_mass+" (Rolled Mass: "+str(round(mass,2))+")",category]
+    return display_mass+" (Rolled Mass: "+str(round(mass,2))+")"
 
 def display_dict(dictionary):
     buffer=""
@@ -307,6 +353,7 @@ while True:
     planet_distances = []
     planet_sizes = []
     planet_sizes_num = []
+    planet_types = []
     planet_display_dict = {} # This is what is displayed.
     planet_num_dict = {} # This is the actual keeper of info.
     star_dict = {}
@@ -325,15 +372,17 @@ while True:
     print("How much randomness would you like? 0 - Classical, 100 - Fully random.")
     print('Input "random" or "r" for this to be random. Integers only please.')
     randomness = input(">")
-    if randomness == "random" or randomness == "r":
+    if randomness == "random" or randomness == "r" or randomness == "R":
         randomness = int(roll())
         print(">Random number selected: "+str(randomness))
     else:
         randomness = int(randomness)
-    print("Put up an upper limit you would like on the number of worlds. Plus or minus 1. Plus enter to use the default.")
+    print("Put up an upper limit you would like on the number of worlds. Plus or minus 1. Plus enter to use the estimate.")
+    print("Estimate:"+str(round(mass*10,0)))
     upper_limit = input(">")
     if upper_limit == "":
-        cull = False
+        cull = cull = True
+        upper_limit = round(mass*10,0)-1+randint(0,2)
     else:
         cull = True
         upper_limit = int(upper_limit)-1+randint(0,2)
